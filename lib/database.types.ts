@@ -72,8 +72,8 @@ export type Database = {
       };
       tags: {
         Row: Tag;
-        Insert: never;
-        Update: never;
+        Insert: Omit<Tag, "id">;
+        Update: Partial<Omit<Tag, "id">>;
         Relationships: [];
       };
       tag_post_links: {

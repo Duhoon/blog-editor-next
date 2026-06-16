@@ -41,5 +41,20 @@
       "Implement the plan."
     ],
     "summary": "Moved the post metadata controls from the right-side panel to a full-width section directly below the title and slug inputs."
+  },
+  {
+    "date": "2026-06-16",
+    "prompts": [
+      "Replace tags UI with Badge Button which can CRUD."
+    ],
+    "summary": "Replaced tag checkboxes with selectable badge buttons and added inline tag create, rename, and delete controls."
+  },
+  {
+    "date": "2026-06-16",
+    "prompts": [
+      "It doesn't have to show all tags in DB. Insert tag in 'New Tag' input, support automate completion in tags. If user choose one in completion list, just add the tag to current list for this post.",
+      "Implement the plan."
+    ],
+    "summary": "Changed tags to show only selected post badges, added autocomplete suggestions from existing tags, and made Enter/click add existing tags or create new ones."
   }
 ]

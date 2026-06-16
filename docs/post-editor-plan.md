@@ -8,7 +8,7 @@ The post list sidebar can be hidden from the editor header. The preference is st
 
 The markdown editor uses `@mdxeditor/editor` with toolbar formatting, source-first editing, tables, links, code blocks, image insertion, markdown shortcuts, and a separate live preview panel. Content is still saved as plain markdown in `posts.content`.
 
-The post metadata controls are placed directly below the Title and Slug inputs instead of in a right-side column. This keeps Locale, Category, Thumbnail, Published, Tags, and Linked Images close to the primary post fields and gives the markdown editor more room.
+The post metadata controls are placed directly below the Title and Slug inputs instead of in a right-side column. This keeps Locale, Category, Thumbnail, Published, Tags, and Linked Images close to the primary post fields and gives the markdown editor more room. Tags show only the current post selection as badges; the `New tag` input autocompletes existing tags, creates new tags, and selected badges support rename/delete.
 
 ## Data Model
 
@@ -20,4 +20,4 @@ New posts require a manually entered slug. Publishing sets `is_published` and `p
 
 ## Validation
 
-Validate with `pnpm lint`, `pnpm build`, and manual checks for auth, listing, create, edit, save, publish, unpublish, delete, metadata layout below title/slug, category selection, tag assignment, thumbnail editing, image metadata display, visible MDXEditor source input, live preview, toolbar/source mode, and image upload.
+Validate with `pnpm lint`, `pnpm build`, and manual checks for auth, listing, create, edit, save, publish, unpublish, delete, metadata layout below title/slug, category selection, selected tag badges, tag autocomplete assignment, tag create/rename/delete, thumbnail editing, image metadata display, visible MDXEditor source input, live preview, toolbar/source mode, and image upload.

@@ -4,15 +4,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import {
+  Check,
   FileText,
   Loader2,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
+  Pencil,
   Plus,
   RefreshCw,
   Save,
   Trash2,
+  X,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -101,6 +104,10 @@ function errorMessage(error: unknown) {
 
 function categoryLabel(category: Category, locale: string) {
   return category.name[locale] ?? category.name["en-US"] ?? category.name.ko ?? category.id;
+}
+
+function sortTags(tagsToSort: Tag[]) {
+  return [...tagsToSort].sort((first, second) => first.name.localeCompare(second.name));
 }
 
 async function runSupabaseWrite<T extends { error: Error | null }>(write: PromiseLike<T>) {
@@ -233,6 +240,10 @@ export function BlogEditor() {
   const [draft, setDraft] = useState<DraftPost>(() => emptyDraft());
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [newTagName, setNewTagName] = useState("");
+  const [editingTagId, setEditingTagId] = useState<number | null>(null);
+  const [editingTagName, setEditingTagName] = useState("");
+  const [tagBusy, setTagBusy] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window === "undefined") {
@@ -246,6 +257,29 @@ export function BlogEditor() {
     () => posts.find((post) => post.id === selectedPostId) ?? null,
     [posts, selectedPostId],
   );
+
+  const selectedTags = useMemo(
+    () =>
+      draft.tagIds
+        .map((tagId) => tags.find((tag) => tag.id === tagId))
+        .filter((tag): tag is Tag => Boolean(tag)),
+    [draft.tagIds, tags],
+  );
+
+  const tagSuggestions = useMemo(() => {
+    const query = newTagName.trim().toLowerCase();
+    if (!query) {
+      return [];
+    }
+
+    return tags
+      .filter(
+        (tag) =>
+          !draft.tagIds.includes(tag.id) &&
+          tag.name.toLowerCase().includes(query),
+      )
+      .slice(0, 8);
+  }, [draft.tagIds, newTagName, tags]);
 
   const loadData = useCallback(
     async (preferredPostId?: number | null) => {
@@ -467,13 +501,171 @@ export function BlogEditor() {
     }
   }
 
-  function toggleTag(tagId: number) {
+  function addTagToDraft(tag: Tag) {
+    setDraft((current) =>
+      current.tagIds.includes(tag.id)
+        ? current
+        : { ...current, tagIds: [...current.tagIds, tag.id] },
+    );
+    setNewTagName("");
+    setMessage(`Added "${tag.name}" to this post.`);
+    setError(null);
+  }
+
+  function removeTagFromDraft(tagId: number) {
     setDraft((current) => ({
       ...current,
-      tagIds: current.tagIds.includes(tagId)
-        ? current.tagIds.filter((id) => id !== tagId)
-        : [...current.tagIds, tagId],
+      tagIds: current.tagIds.filter((id) => id !== tagId),
     }));
+  }
+
+  async function createTagFromName(name: string) {
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
+      return;
+    }
+
+    setTagBusy(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const existingTag = tags.find(
+        (tag) => tag.name.toLowerCase() === trimmedName.toLowerCase(),
+      );
+
+      if (existingTag) {
+        addTagToDraft(existingTag);
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const { data, error: createError } = await supabase
+        .from("tags")
+        .insert({ name: trimmedName, created_at: now, updated_at: now })
+        .select()
+        .single();
+
+      if (createError) {
+        throw createError;
+      }
+
+      const createdTag = data as Tag;
+      setTags((current) => sortTags([...current, createdTag]));
+      setDraft((current) => ({ ...current, tagIds: [...current.tagIds, createdTag.id] }));
+      setNewTagName("");
+      setMessage("Tag created and selected.");
+    } catch (caughtError) {
+      setError(errorMessage(caughtError));
+    } finally {
+      setTagBusy(false);
+    }
+  }
+
+  async function handleTagInputSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const firstSuggestion = tagSuggestions[0];
+    if (firstSuggestion) {
+      addTagToDraft(firstSuggestion);
+      return;
+    }
+
+    await createTagFromName(newTagName);
+  }
+
+  function startEditingTag(tag: Tag) {
+    setEditingTagId(tag.id);
+    setEditingTagName(tag.name);
+    setError(null);
+    setMessage(null);
+  }
+
+  async function handleUpdateTag() {
+    if (!editingTagId) {
+      return;
+    }
+
+    const name = editingTagName.trim();
+    if (!name) {
+      setError("Tag name is required.");
+      return;
+    }
+
+    setTagBusy(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      if (tags.some((tag) => tag.id !== editingTagId && tag.name.toLowerCase() === name.toLowerCase())) {
+        throw new Error("A tag with that name already exists.");
+      }
+
+      const now = new Date().toISOString();
+      const { data, error: updateError } = await supabase
+        .from("tags")
+        .update({ name, updated_at: now })
+        .eq("id", editingTagId)
+        .select()
+        .single();
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      const updatedTag = data as Tag;
+      setTags((current) =>
+        sortTags(current.map((tag) => (tag.id === updatedTag.id ? updatedTag : tag))),
+      );
+      setEditingTagId(null);
+      setEditingTagName("");
+      setMessage("Tag updated.");
+    } catch (caughtError) {
+      setError(errorMessage(caughtError));
+    } finally {
+      setTagBusy(false);
+    }
+  }
+
+  async function handleDeleteTag(tag: Tag) {
+    const confirmed = window.confirm(`Delete the "${tag.name}" tag from all posts?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setTagBusy(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const linkDelete = await supabase.from("tag_post_links").delete().eq("tag_id", tag.id);
+      if (linkDelete.error) {
+        throw linkDelete.error;
+      }
+
+      const tagDelete = await supabase.from("tags").delete().eq("id", tag.id);
+      if (tagDelete.error) {
+        throw tagDelete.error;
+      }
+
+      setTags((current) => current.filter((currentTag) => currentTag.id !== tag.id));
+      setDraft((current) => ({
+        ...current,
+        tagIds: current.tagIds.filter((tagId) => tagId !== tag.id),
+      }));
+
+      if (editingTagId === tag.id) {
+        setEditingTagId(null);
+        setEditingTagName("");
+      }
+
+      setMessage("Tag deleted.");
+    } catch (caughtError) {
+      setError(errorMessage(caughtError));
+    } finally {
+      setTagBusy(false);
+    }
   }
 
   if (authLoading) {
@@ -717,18 +909,118 @@ export function BlogEditor() {
                   <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                     Tags
                   </h3>
-                  <div className="grid max-h-48 gap-2 overflow-auto border border-border p-2">
-                    {tags.map((tag) => (
-                      <label key={tag.id} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={draft.tagIds.includes(tag.id)}
-                          onChange={() => toggleTag(tag.id)}
-                        />
-                        {tag.name}
-                      </label>
-                    ))}
-                    {!tags.length ? <p className="text-sm text-muted-foreground">No tags found.</p> : null}
+                  <form className="relative flex gap-2" onSubmit={(event) => void handleTagInputSubmit(event)}>
+                    <div className="relative flex-1">
+                      <input
+                        className={inputClass}
+                        value={newTagName}
+                        onChange={(event) => setNewTagName(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Escape") {
+                            setNewTagName("");
+                          }
+                        }}
+                        placeholder="New tag"
+                        disabled={tagBusy}
+                        autoComplete="off"
+                      />
+                      {tagSuggestions.length ? (
+                        <div className="absolute left-0 right-0 top-11 z-20 max-h-56 overflow-auto border border-border bg-popover shadow-sm">
+                          {tagSuggestions.map((tag) => (
+                            <button
+                              key={tag.id}
+                              type="button"
+                              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => addTagToDraft(tag)}
+                            >
+                              <span>{tag.name}</span>
+                              <span className="text-xs text-muted-foreground">Add</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                    <Button type="submit" size="sm" disabled={tagBusy || !newTagName.trim()}>
+                      <Plus aria-hidden="true" />
+                      Add
+                    </Button>
+                  </form>
+                  <div className="flex min-h-12 flex-wrap gap-2 border border-border p-2">
+                    {selectedTags.map((tag) => {
+                      const isEditing = editingTagId === tag.id;
+
+                      if (isEditing) {
+                        return (
+                          <div
+                            key={tag.id}
+                            className="flex min-w-56 items-center gap-1 border border-border bg-background p-1"
+                          >
+                            <input
+                              className="h-8 min-w-0 flex-1 border border-border bg-background px-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
+                              value={editingTagName}
+                              onChange={(event) => setEditingTagName(event.target.value)}
+                              disabled={tagBusy}
+                            />
+                            <Button
+                              type="button"
+                              size="icon-xs"
+                              onClick={() => void handleUpdateTag()}
+                              disabled={tagBusy || !editingTagName.trim()}
+                            >
+                              <Check aria-hidden="true" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={() => {
+                                setEditingTagId(null);
+                                setEditingTagName("");
+                              }}
+                              disabled={tagBusy}
+                            >
+                              <X aria-hidden="true" />
+                            </Button>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div key={tag.id} className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => removeTagFromDraft(tag.id)}
+                            disabled={tagBusy}
+                            className="inline-flex h-8 items-center gap-2 border border-primary bg-primary px-3 text-xs font-semibold uppercase tracking-widest text-primary-foreground transition-colors hover:bg-primary/80"
+                          >
+                            {tag.name}
+                            <X className="size-3" aria-hidden="true" />
+                          </button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() => startEditingTag(tag)}
+                            disabled={tagBusy}
+                          >
+                            <Pencil aria-hidden="true" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() => void handleDeleteTag(tag)}
+                            disabled={tagBusy}
+                          >
+                            <Trash2 aria-hidden="true" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                    {!selectedTags.length ? (
+                      <p className="text-sm text-muted-foreground">No tags selected for this post.</p>
+                    ) : null}
                   </div>
                 </div>
 
