@@ -1,0 +1,21 @@
+[
+  {
+    "date": "2026-06-16",
+    "prompts": [
+      "I'm planning to make a post editor for blog. The contents are based on markdown. If you needs, add library to deal with markdown. Use supabase DB to get data I inserted already.",
+      "There are other table like categories and tags",
+      "Please find post_category_links. Why don't you find all info in my supabase?",
+      "Okay, then you can check my whole tables in supabase.",
+      "Implement the plan."
+    ],
+    "summary": "Implemented a Supabase-backed markdown blog editor with email/password auth, post CRUD, category and tag link editing, linked image metadata display, and GFM markdown preview."
+  },
+  {
+    "date": "2026-06-16",
+    "prompts": [
+      "The Sidebar showing post list can be hide.",
+      "Implement the plan."
+    ],
+    "summary": "Added a persistent header toggle that hides or shows the post list sidebar while preserving the selected post and expanding the editor layout."
+  }
+]
