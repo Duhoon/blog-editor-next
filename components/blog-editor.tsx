@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import {
-  Eye,
   FileText,
   Loader2,
   LogOut,
@@ -59,10 +59,20 @@ type DraftPost = {
 
 const inputClass =
   "h-10 w-full border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20";
-const textareaClass =
-  "min-h-56 w-full resize-none border border-border bg-background px-3 py-2 text-sm leading-6 outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20";
 const labelClass = "grid gap-1.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground";
 const sidebarPreferenceKey = "blog-editor-sidebar-open";
+
+const MarkdownRichEditor = dynamic(
+  () => import("@/components/markdown-rich-editor").then((module) => module.MarkdownRichEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-96 items-center justify-center border border-border bg-card">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" aria-hidden="true" />
+      </div>
+    ),
+  },
+);
 
 function emptyDraft(): DraftPost {
   return {
@@ -223,6 +233,7 @@ export function BlogEditor() {
   const [draft, setDraft] = useState<DraftPost>(() => emptyDraft());
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editorKey, setEditorKey] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window === "undefined") {
       return true;
@@ -270,6 +281,7 @@ export function BlogEditor() {
         const nextPost = nextPosts.find((post) => post.id === nextPostId) ?? nextPosts[0] ?? null;
         setSelectedPostId(nextPost?.id ?? null);
         setDraft(nextPost ? draftFromPost(nextPost) : emptyDraft());
+        setEditorKey((current) => current + 1);
       } catch (caughtError) {
         setError(errorMessage(caughtError));
       } finally {
@@ -345,6 +357,7 @@ export function BlogEditor() {
   function handleNewPost() {
     setSelectedPostId(null);
     setDraft(emptyDraft());
+    setEditorKey((current) => current + 1);
     setMessage("Drafting a new post.");
     setError(null);
   }
@@ -352,6 +365,7 @@ export function BlogEditor() {
   function handleSelectPost(post: PostWithRelations) {
     setSelectedPostId(post.id);
     setDraft(draftFromPost(post));
+    setEditorKey((current) => current + 1);
     setMessage(null);
     setError(null);
   }
@@ -622,152 +636,168 @@ export function BlogEditor() {
           {message ? <p className="border border-border bg-muted px-3 py-2 text-sm">{message}</p> : null}
           {error ? <p className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p> : null}
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
-            <div className="grid gap-4">
-              <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className={labelClass}>
+                Title
+                <input
+                  className={inputClass}
+                  value={draft.title}
+                  onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
+                />
+              </label>
+              <label className={labelClass}>
+                Slug
+                <input
+                  className={inputClass}
+                  value={draft.slug}
+                  onChange={(event) => setDraft((current) => ({ ...current, slug: event.target.value }))}
+                />
+              </label>
+            </div>
+
+            <section className="grid gap-4 border border-border bg-card p-4">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(120px,0.7fr)_minmax(180px,1fr)_minmax(220px,1.3fr)_auto] xl:items-end">
                 <label className={labelClass}>
-                  Title
+                  Locale
                   <input
                     className={inputClass}
-                    value={draft.title}
-                    onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
+                    value={draft.locale}
+                    onChange={(event) => setDraft((current) => ({ ...current, locale: event.target.value }))}
                   />
                 </label>
+
                 <label className={labelClass}>
-                  Slug
+                  Category
+                  <select
+                    className={inputClass}
+                    value={draft.categoryId}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, categoryId: event.target.value }))
+                    }
+                  >
+                    <option value="">No category</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {categoryLabel(category, draft.locale)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className={labelClass}>
+                  Thumbnail
                   <input
                     className={inputClass}
-                    value={draft.slug}
-                    onChange={(event) => setDraft((current) => ({ ...current, slug: event.target.value }))}
+                    value={draft.thumbnail}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, thumbnail: event.target.value }))
+                    }
                   />
+                </label>
+
+                <label className="flex h-10 items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={draft.is_published}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        is_published: event.target.checked,
+                        published_at: event.target.checked ? current.published_at : null,
+                      }))
+                    }
+                  />
+                  Published
                 </label>
               </div>
 
-              <label className={labelClass}>
-                Brief
-                <textarea
-                  className="min-h-20 w-full resize-none border border-border bg-background px-3 py-2 text-sm leading-6 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-                  value={draft.brief}
-                  onChange={(event) => setDraft((current) => ({ ...current, brief: event.target.value }))}
-                />
-              </label>
-
               <div className="grid gap-4 lg:grid-cols-2">
-                <label className={labelClass}>
+                <div className="grid gap-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Tags
+                  </h3>
+                  <div className="grid max-h-48 gap-2 overflow-auto border border-border p-2">
+                    {tags.map((tag) => (
+                      <label key={tag.id} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={draft.tagIds.includes(tag.id)}
+                          onChange={() => toggleTag(tag.id)}
+                        />
+                        {tag.name}
+                      </label>
+                    ))}
+                    {!tags.length ? <p className="text-sm text-muted-foreground">No tags found.</p> : null}
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Linked Images
+                  </h3>
+                  <div className="grid gap-2 border border-border p-2 text-sm">
+                    {selectedPost?.images.length ? (
+                      selectedPost.images.map((image) => (
+                        <div key={image.id} className="grid gap-1 border-b border-border pb-2 last:border-b-0 last:pb-0">
+                          <span className="font-medium">{image.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {image.mimetype} · {image.width}x{image.height}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-muted-foreground">No linked image metadata.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <label className={labelClass}>
+              Brief
+              <textarea
+                className="min-h-20 w-full resize-none border border-border bg-background px-3 py-2 text-sm leading-6 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
+                value={draft.brief}
+                onChange={(event) => setDraft((current) => ({ ...current, brief: event.target.value }))}
+              />
+            </label>
+
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]">
+              <div className="grid gap-1.5">
+                <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Markdown
-                  <textarea
-                    className={cn(textareaClass, "font-mono")}
-                    value={draft.content}
-                    onChange={(event) => setDraft((current) => ({ ...current, content: event.target.value }))}
-                  />
-                </label>
-                <div className="grid gap-1.5">
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    <Eye className="size-3.5" aria-hidden="true" />
-                    Preview
-                  </div>
-                  <div className="markdown-preview min-h-56 overflow-auto border border-border bg-card px-4 py-3 text-sm">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {draft.content || "_No markdown content yet._"}
-                    </ReactMarkdown>
-                  </div>
+                </div>
+                <MarkdownRichEditor
+                  key={editorKey}
+                  markdown={draft.content}
+                  postId={draft.id}
+                  onChange={(content) => setDraft((current) => ({ ...current, content }))}
+                  onUploadBlocked={() => {
+                    setError("Save the post before uploading images.");
+                    setMessage(null);
+                  }}
+                  onUploadError={(uploadError) => {
+                    setError(uploadError);
+                    setMessage(null);
+                  }}
+                  onUploadComplete={() => {
+                    setError(null);
+                    setMessage("Image uploaded and inserted.");
+                  }}
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Preview
+                </div>
+                <div className="markdown-preview min-h-[28rem] overflow-auto border border-border bg-card px-4 py-3 text-sm">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {draft.content || "_No markdown content yet._"}
+                  </ReactMarkdown>
                 </div>
               </div>
             </div>
-
-            <aside className="grid content-start gap-4 border border-border bg-card p-4">
-              <label className={labelClass}>
-                Locale
-                <input
-                  className={inputClass}
-                  value={draft.locale}
-                  onChange={(event) => setDraft((current) => ({ ...current, locale: event.target.value }))}
-                />
-              </label>
-
-              <label className={labelClass}>
-                Category
-                <select
-                  className={inputClass}
-                  value={draft.categoryId}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, categoryId: event.target.value }))
-                  }
-                >
-                  <option value="">No category</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {categoryLabel(category, draft.locale)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className={labelClass}>
-                Thumbnail
-                <input
-                  className={inputClass}
-                  value={draft.thumbnail}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, thumbnail: event.target.value }))
-                  }
-                />
-              </label>
-
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={draft.is_published}
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      is_published: event.target.checked,
-                      published_at: event.target.checked ? current.published_at : null,
-                    }))
-                  }
-                />
-                Published
-              </label>
-
-              <div className="grid gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Tags
-                </h3>
-                <div className="grid max-h-48 gap-2 overflow-auto border border-border p-2">
-                  {tags.map((tag) => (
-                    <label key={tag.id} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={draft.tagIds.includes(tag.id)}
-                        onChange={() => toggleTag(tag.id)}
-                      />
-                      {tag.name}
-                    </label>
-                  ))}
-                  {!tags.length ? <p className="text-sm text-muted-foreground">No tags found.</p> : null}
-                </div>
-              </div>
-
-              <div className="grid gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Linked Images
-                </h3>
-                <div className="grid gap-2 border border-border p-2 text-sm">
-                  {selectedPost?.images.length ? (
-                    selectedPost.images.map((image) => (
-                      <div key={image.id} className="grid gap-1 border-b border-border pb-2 last:border-b-0 last:pb-0">
-                        <span className="font-medium">{image.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {image.mimetype} · {image.width}x{image.height}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground">No linked image metadata.</p>
-                  )}
-                </div>
-              </div>
-            </aside>
           </div>
         </section>
       </div>

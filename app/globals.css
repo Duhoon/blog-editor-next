@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@mdxeditor/editor/style.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -127,6 +128,48 @@
   html {
     @apply font-sans;
   }
+}
+
+.mdx-editor-shell {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--card-foreground);
+  min-height: 28rem;
+  overflow: hidden;
+}
+
+.mdx-editor-shell .mdxeditor-toolbar {
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+  border-radius: 0;
+  min-height: 2.75rem;
+}
+
+.mdx-editor-content {
+  min-height: 23rem;
+  padding: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.mdx-editor-shell .cm-editor,
+.mdx-editor-shell .cm-scroller,
+.mdx-editor-shell .cm-content {
+  min-height: 23rem;
+}
+
+.mdx-editor-shell .cm-editor {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.mdx-editor-shell .cm-content {
+  padding: 1rem;
+}
+
+.mdx-editor-shell .cm-line {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.65;
 }
 
 .markdown-preview {

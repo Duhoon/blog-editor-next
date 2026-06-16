@@ -90,7 +90,7 @@ export type Database = {
       };
       images: {
         Row: PostImage;
-        Insert: never;
+        Insert: Omit<PostImage, "id">;
         Update: never;
         Relationships: [];
       };

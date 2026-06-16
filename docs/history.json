@@ -17,5 +17,29 @@
       "Implement the plan."
     ],
     "summary": "Added a persistent header toggle that hides or shows the post list sidebar while preserving the selected post and expanding the editor layout."
+  },
+  {
+    "date": "2026-06-16",
+    "prompts": [
+      "Markdown editor should support more fucntion. Get lib for editor like toast/ui. Recommend like this libs.",
+      "Implement the plan."
+    ],
+    "summary": "Replaced the textarea markdown editor with MDXEditor, added rich markdown toolbar/source-mode features, and wired image uploads to the Supabase `blog-contents` bucket with image metadata insertion."
+  },
+  {
+    "date": "2026-06-16",
+    "prompts": [
+      "The editor is totally broken. It's showing just Icon for tools and I cannot find input UI for content.",
+      "Implement the plan."
+    ],
+    "summary": "Repaired the editor UI by defaulting MDXEditor to source mode, strengthening the visible input surface, and restoring a live markdown preview panel."
+  },
+  {
+    "date": "2026-06-16",
+    "prompts": [
+      "Right side UI move to below the title and slug input UI.",
+      "Implement the plan."
+    ],
+    "summary": "Moved the post metadata controls from the right-side panel to a full-width section directly below the title and slug inputs."
   }
 ]
