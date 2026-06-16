@@ -1083,7 +1083,7 @@ export function BlogEditor() {
                 <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Preview
                 </div>
-                <div className="markdown-preview min-h-[28rem] overflow-auto border border-border bg-card px-4 py-3 text-sm">
+                <div className="markdown-preview min-h-[18rem] overflow-auto border border-border bg-card px-4 py-3 text-sm">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {draft.content || "_No markdown content yet._"}
                   </ReactMarkdown>

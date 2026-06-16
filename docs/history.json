@@ -56,5 +56,19 @@
       "Implement the plan."
     ],
     "summary": "Changed tags to show only selected post badges, added autocomplete suggestions from existing tags, and made Enter/click add existing tags or create new ones."
+  },
+  {
+    "date": "2026-06-16",
+    "prompts": [
+      "Remove unuseful space below editor"
+    ],
+    "summary": "Reduced the fixed minimum heights for the markdown editor and preview so the content area no longer reserves excessive blank space."
+  },
+  {
+    "date": "2026-06-16",
+    "prompts": [
+      "I think the element having class, \"mdxeditor-popup-container _editorRoot_f3hmk_53 _popupContainer_f3hmk_1239 mdx-editor-shell\" is the problem. Fix it."
+    ],
+    "summary": "Moved the `mdx-editor-shell` class from the MDXEditor component to an outer wrapper so popup containers no longer inherit shell border and sizing styles."
   }
 ]

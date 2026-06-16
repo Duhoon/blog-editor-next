@@ -134,7 +134,7 @@
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--card-foreground);
-  min-height: 28rem;
+  min-height: 18rem;
   overflow: hidden;
 }
 
@@ -146,7 +146,7 @@
 }
 
 .mdx-editor-content {
-  min-height: 23rem;
+  min-height: 13rem;
   padding: 1rem;
   overflow-wrap: anywhere;
 }
@@ -154,7 +154,7 @@
 .mdx-editor-shell .cm-editor,
 .mdx-editor-shell .cm-scroller,
 .mdx-editor-shell .cm-content {
-  min-height: 23rem;
+  min-height: 13rem;
 }
 
 .mdx-editor-shell .cm-editor {

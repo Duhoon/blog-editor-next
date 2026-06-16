@@ -177,19 +177,20 @@ export function MarkdownRichEditor({
   );
 
   return (
-    <MDXEditor
-      ref={editorRef}
-      markdown={markdown}
-      onChange={(nextMarkdown, initialNormalize) => {
-        if (!initialNormalize) {
-          onChange(nextMarkdown);
-        }
-      }}
-      onError={(payload) => onUploadError(payload.error)}
-      plugins={plugins}
-      className="mdx-editor-shell"
-      contentEditableClassName="mdx-editor-content"
-      placeholder="Write markdown content..."
-    />
+    <div className="mdx-editor-shell">
+      <MDXEditor
+        ref={editorRef}
+        markdown={markdown}
+        onChange={(nextMarkdown, initialNormalize) => {
+          if (!initialNormalize) {
+            onChange(nextMarkdown);
+          }
+        }}
+        onError={(payload) => onUploadError(payload.error)}
+        plugins={plugins}
+        contentEditableClassName="mdx-editor-content"
+        placeholder="Write markdown content..."
+      />
+    </div>
   );
 }
