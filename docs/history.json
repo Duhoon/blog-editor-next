@@ -70,5 +70,20 @@
       "I think the element having class, \"mdxeditor-popup-container _editorRoot_f3hmk_53 _popupContainer_f3hmk_1239 mdx-editor-shell\" is the problem. Fix it."
     ],
     "summary": "Moved the `mdx-editor-shell` class from the MDXEditor component to an outer wrapper so popup containers no longer inherit shell border and sizing styles."
+  },
+  {
+    "date": "2026-06-17",
+    "prompts": [
+      "In narrow width in rich mode on mdxeditor, mdxeditor's tool icons are disapeared by mode icons. Make them not overraped."
+    ],
+    "summary": "Adjusted MDXEditor toolbar wrapping and diff/source toggle positioning so mode controls no longer overlap formatting icons on narrow widths."
+  },
+  {
+    "date": "2026-06-17",
+    "prompts": [
+      "Thumbnail is like a image actually. It must be uploaded like images on contents. If I click thumbnail UI, it popup image upload UI.",
+      "Implement the plan."
+    ],
+    "summary": "Replaced the thumbnail text input with a clickable preview/upload card and shared the Supabase image upload helper between thumbnail and content image uploads."
   }
 ]

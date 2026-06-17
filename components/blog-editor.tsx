@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import {
   Check,
   FileText,
+  ImagePlus,
   Loader2,
   LogOut,
   PanelLeftClose,
@@ -29,6 +30,7 @@ import type {
   Tag,
   TagPostLink,
 } from "@/lib/database.types";
+import { uploadPostImage } from "@/lib/image-upload";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 
@@ -245,6 +247,7 @@ export function BlogEditor() {
   const [editingTagName, setEditingTagName] = useState("");
   const [tagBusy, setTagBusy] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window === "undefined") {
       return true;
@@ -668,6 +671,37 @@ export function BlogEditor() {
     }
   }
 
+  async function handleThumbnailFile(file: File | undefined) {
+    if (!file) {
+      return;
+    }
+
+    if (!draft.id) {
+      setError("Save the post before uploading a thumbnail.");
+      setMessage(null);
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const publicUrl = await uploadPostImage({
+        supabase,
+        postId: draft.id,
+        file,
+        folder: "thumbnail",
+      });
+      setDraft((current) => ({ ...current, thumbnail: publicUrl }));
+      setMessage("Thumbnail uploaded. Save the post to persist it.");
+    } catch (caughtError) {
+      setError(errorMessage(caughtError));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (authLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
@@ -877,16 +911,56 @@ export function BlogEditor() {
                   </select>
                 </label>
 
-                <label className={labelClass}>
+                <div className={labelClass}>
                   Thumbnail
                   <input
-                    className={inputClass}
-                    value={draft.thumbnail}
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, thumbnail: event.target.value }))
-                    }
+                    ref={thumbnailInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(event) => {
+                      void handleThumbnailFile(event.target.files?.[0]);
+                      event.target.value = "";
+                    }}
                   />
-                </label>
+                  <button
+                    type="button"
+                    onClick={() => thumbnailInputRef.current?.click()}
+                    disabled={saving}
+                    className="group relative flex h-28 w-full items-center justify-center overflow-hidden border border-border bg-background text-sm text-muted-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    {draft.thumbnail ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={draft.thumbnail}
+                        alt="Post thumbnail"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <ImagePlus className="size-4" aria-hidden="true" />
+                        Upload thumbnail
+                      </span>
+                    )}
+                    {draft.thumbnail ? (
+                      <span className="absolute inset-x-0 bottom-0 bg-black/60 px-2 py-1 text-center text-xs font-semibold uppercase tracking-widest text-white opacity-0 transition-opacity group-hover:opacity-100">
+                        Change
+                      </span>
+                    ) : null}
+                  </button>
+                  {draft.thumbnail ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      onClick={() => setDraft((current) => ({ ...current, thumbnail: "" }))}
+                      disabled={saving}
+                    >
+                      <X aria-hidden="true" />
+                      Clear
+                    </Button>
+                  ) : null}
+                </div>
 
                 <label className="flex h-10 items-center gap-2 text-sm font-medium">
                   <input

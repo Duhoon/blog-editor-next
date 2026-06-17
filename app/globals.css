@@ -143,6 +143,28 @@
   background: var(--muted);
   border-radius: 0;
   min-height: 2.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  overflow-x: visible;
+  row-gap: 0.375rem;
+}
+
+.mdx-editor-shell .mdxeditor-toolbar [class*="_diffSourceToggleWrapper_"] {
+  position: static;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+  .mdx-editor-shell .mdxeditor-toolbar {
+    align-items: flex-start;
+  }
+
+  .mdx-editor-shell .mdxeditor-toolbar [class*="_diffSourceToggleWrapper_"] {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
+  }
 }
 
 .mdx-editor-content {

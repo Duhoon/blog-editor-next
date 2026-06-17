@@ -30,9 +30,8 @@ import {
   toolbarPlugin,
 } from "@mdxeditor/editor";
 import { useMemo, useRef } from "react";
+import { uploadPostImage } from "@/lib/image-upload";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-
-const imageBucket = "blog-contents";
 
 type MarkdownRichEditorProps = {
   markdown: string;
@@ -42,30 +41,6 @@ type MarkdownRichEditorProps = {
   onUploadError: (message: string) => void;
   onUploadComplete: (url: string) => void;
 };
-
-function safeFileName(name: string) {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9.\-_]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "image";
-}
-
-async function getImageSize(file: File) {
-  const objectUrl = URL.createObjectURL(file);
-
-  try {
-    const image = new Image();
-    const loaded = new Promise<{ width: number; height: number }>((resolve, reject) => {
-      image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
-      image.onerror = () => reject(new Error("Could not read image dimensions."));
-    });
-    image.src = objectUrl;
-    return await loaded;
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
-}
 
 export function MarkdownRichEditor({
   markdown,
@@ -112,37 +87,7 @@ export function MarkdownRichEditor({
           }
 
           try {
-            const now = new Date().toISOString();
-            const name = safeFileName(file.name);
-            const path = `posts/${postId}/${now.replace(/[:.]/g, "-")}-${name}`;
-            const dimensions = await getImageSize(file);
-            const { error: uploadError } = await supabase.storage
-              .from(imageBucket)
-              .upload(path, file, {
-                contentType: file.type || "application/octet-stream",
-                upsert: false,
-              });
-
-            if (uploadError) {
-              throw uploadError;
-            }
-
-            const { data } = supabase.storage.from(imageBucket).getPublicUrl(path);
-            const publicUrl = data.publicUrl;
-            const { error: metadataError } = await supabase.from("images").insert({
-              post_id: postId,
-              name: path,
-              mimetype: file.type || "application/octet-stream",
-              uploaded_at: now,
-              updated_at: now,
-              width: dimensions.width,
-              height: dimensions.height,
-            });
-
-            if (metadataError) {
-              throw metadataError;
-            }
-
+            const publicUrl = await uploadPostImage({ supabase, postId, file });
             onUploadComplete(publicUrl);
             return publicUrl;
           } catch (error) {
